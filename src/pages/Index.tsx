@@ -14,6 +14,7 @@ import { PhoneIcon, MapPinIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useEffect, useRef, useState } from "react"
 import DotPattern from "@/components/ui/dot-pattern"
+import func2url from "../../backend/func2url.json"
 
 type Review = {
   id: number
@@ -22,37 +23,8 @@ type Review = {
   text: string
   rating: number
   date: string
-  adminReply?: string
+  adminReply?: string | null
 }
-
-const MOCK_REVIEWS: Review[] = [
-  {
-    id: 1,
-    name: "Алексей М.",
-    station: "АЗС №3, ул. Ленина",
-    text: "Отличная заправка! Всегда чисто, персонал вежливый. Заправляюсь здесь уже 2 года, качество топлива не подводит.",
-    rating: 5,
-    date: "12 апреля 2026",
-    adminReply: "Алексей, спасибо за тёплые слова! Рады видеть вас снова на наших станциях.",
-  },
-  {
-    id: 2,
-    name: "Марина К.",
-    station: "АЗС №7, трасса М5",
-    text: "Быстро обслужили, очереди не было. Удобная оплата по QR-коду. Приятный кофе в магазинчике.",
-    rating: 5,
-    date: "10 апреля 2026",
-  },
-  {
-    id: 3,
-    name: "Дмитрий С.",
-    station: "АЗС №1, пр. Мира",
-    text: "Немного долго ждал на кассе, но в целом всё нормально. Топливо хорошего качества.",
-    rating: 4,
-    date: "8 апреля 2026",
-    adminReply: "Дмитрий, приносим извинения за ожидание. Мы работаем над улучшением скорости обслуживания на этой станции.",
-  },
-]
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -96,16 +68,28 @@ function ReviewCard({ review }: { review: Review }) {
   )
 }
 
-function ReviewForm() {
+function ReviewForm({ onSuccess }: { onSuccess: () => void }) {
   const [name, setName] = useState("")
   const [station, setStation] = useState("")
   const [text, setText] = useState("")
   const [rating, setRating] = useState(5)
+  const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setLoading(true)
+    try {
+      await fetch(func2url["create-review"], {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, station, text, rating }),
+      })
+      setSubmitted(true)
+      onSuccess()
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (submitted) {
@@ -129,55 +113,34 @@ function ReviewForm() {
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-4">
       <div className="flex flex-col gap-2">
-        <Label className="text-white [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] font-open-sans-custom">Ваше имя</Label>
-        <Input
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Иван Петров"
-          className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
-        />
+        <Label className="text-white font-open-sans-custom">Ваше имя</Label>
+        <Input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Иван Петров"
+          className="bg-white/10 border-white/20 text-white placeholder:text-gray-500" />
       </div>
       <div className="flex flex-col gap-2">
-        <Label className="text-white [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] font-open-sans-custom">Станция</Label>
-        <Input
-          required
-          value={station}
-          onChange={(e) => setStation(e.target.value)}
-          placeholder="АЗС №3, ул. Ленина"
-          className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
-        />
+        <Label className="text-white font-open-sans-custom">Станция</Label>
+        <Input required value={station} onChange={(e) => setStation(e.target.value)} placeholder="АЗС №3, ул. Ленина"
+          className="bg-white/10 border-white/20 text-white placeholder:text-gray-500" />
       </div>
       <div className="flex flex-col gap-2">
-        <Label className="text-white [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] font-open-sans-custom">Оценка</Label>
+        <Label className="text-white font-open-sans-custom">Оценка</Label>
         <div className="flex gap-2">
           {[1, 2, 3, 4, 5].map((star) => (
-            <button
-              key={star}
-              type="button"
-              onClick={() => setRating(star)}
-              className={`text-2xl transition-transform hover:scale-110 ${star <= rating ? "text-yellow-400" : "text-white/20"}`}
-            >
+            <button key={star} type="button" onClick={() => setRating(star)}
+              className={`text-2xl transition-transform hover:scale-110 ${star <= rating ? "text-yellow-400" : "text-white/20"}`}>
               ★
             </button>
           ))}
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Label className="text-white [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] font-open-sans-custom">Отзыв</Label>
-        <Textarea
-          required
-          value={text}
-          onChange={(e) => setText(e.target.value)}
+        <Label className="text-white font-open-sans-custom">Отзыв</Label>
+        <Textarea required value={text} onChange={(e) => setText(e.target.value)}
           placeholder="Поделитесь впечатлениями о заправке..."
-          className="bg-white/10 border-white/20 text-white placeholder:text-gray-500 min-h-[100px]"
-        />
+          className="bg-white/10 border-white/20 text-white placeholder:text-gray-500 min-h-[100px]" />
       </div>
-      <Button
-        className="w-full bg-white text-black hover:bg-gray-100 font-open-sans-custom"
-        type="submit"
-      >
-        Отправить отзыв
+      <Button className="w-full bg-white text-black hover:bg-gray-100 font-open-sans-custom" type="submit" disabled={loading}>
+        {loading ? "Отправляем..." : "Отправить отзыв"}
       </Button>
     </form>
   )
@@ -188,6 +151,18 @@ export default function Index() {
   const reviewsSectionRef = useRef<HTMLDivElement>(null)
   const aboutSectionRef = useRef<HTMLDivElement>(null)
   const contactSectionRef = useRef<HTMLDivElement>(null)
+
+  const [reviews, setReviews] = useState<Review[]>([])
+
+  const loadReviews = async () => {
+    const res = await fetch(func2url["reviews"])
+    const data = await res.json()
+    setReviews(data.reviews || [])
+  }
+
+  useEffect(() => {
+    loadReviews()
+  }, [])
 
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current
@@ -203,70 +178,35 @@ export default function Index() {
         const section = reviewsSectionRef.current
         const isAtTop = section.scrollTop === 0
         const isAtBottom = section.scrollTop + section.clientHeight >= section.scrollHeight - 1
-
         if (delta > 0 && !isAtBottom) return
         if (delta < 0 && !isAtTop) return
-
-        if (delta < 0 && isAtTop) {
-          e.preventDefault()
-          scrollContainer.scrollTo({ left: 1 * containerWidth, behavior: "smooth" })
-          return
-        }
-        if (delta > 0 && isAtBottom) {
-          e.preventDefault()
-          scrollContainer.scrollTo({ left: 3 * containerWidth, behavior: "smooth" })
-          return
-        }
+        if (delta < 0 && isAtTop) { e.preventDefault(); scrollContainer.scrollTo({ left: 1 * containerWidth, behavior: "smooth" }); return }
+        if (delta > 0 && isAtBottom) { e.preventDefault(); scrollContainer.scrollTo({ left: 3 * containerWidth, behavior: "smooth" }); return }
       }
 
       if (currentSection === 3 && aboutSectionRef.current) {
         const section = aboutSectionRef.current
         const isAtTop = section.scrollTop === 0
         const isAtBottom = section.scrollTop + section.clientHeight >= section.scrollHeight - 1
-
         if (delta > 0 && !isAtBottom) return
         if (delta < 0 && !isAtTop) return
-
-        if (delta < 0 && isAtTop) {
-          e.preventDefault()
-          scrollContainer.scrollTo({ left: 2 * containerWidth, behavior: "smooth" })
-          return
-        }
-        if (delta > 0 && isAtBottom) {
-          e.preventDefault()
-          scrollContainer.scrollTo({ left: 4 * containerWidth, behavior: "smooth" })
-          return
-        }
+        if (delta < 0 && isAtTop) { e.preventDefault(); scrollContainer.scrollTo({ left: 2 * containerWidth, behavior: "smooth" }); return }
+        if (delta > 0 && isAtBottom) { e.preventDefault(); scrollContainer.scrollTo({ left: 4 * containerWidth, behavior: "smooth" }); return }
       }
 
       if (currentSection === 4 && contactSectionRef.current) {
         const section = contactSectionRef.current
         const isAtTop = section.scrollTop === 0
         const isAtBottom = section.scrollTop + section.clientHeight >= section.scrollHeight - 1
-
         if (delta > 0 && !isAtBottom) return
         if (delta < 0 && !isAtTop) return
-
-        if (delta < 0 && isAtTop) {
-          e.preventDefault()
-          scrollContainer.scrollTo({ left: 3 * containerWidth, behavior: "smooth" })
-          return
-        }
-        if (delta > 0 && isAtBottom) {
-          e.preventDefault()
-          return
-        }
+        if (delta < 0 && isAtTop) { e.preventDefault(); scrollContainer.scrollTo({ left: 3 * containerWidth, behavior: "smooth" }); return }
+        if (delta > 0 && isAtBottom) { e.preventDefault(); return }
       }
 
       e.preventDefault()
-
       if (Math.abs(delta) > 10) {
-        let targetSection = currentSection
-        if (delta > 0) {
-          targetSection = Math.min(currentSection + 1, 4)
-        } else {
-          targetSection = Math.max(currentSection - 1, 0)
-        }
+        const targetSection = delta > 0 ? Math.min(currentSection + 1, 4) : Math.max(currentSection - 1, 0)
         scrollContainer.scrollTo({ left: targetSection * containerWidth, behavior: "smooth" })
       }
     }
@@ -278,9 +218,7 @@ export default function Index() {
   return (
     <main className="relative h-screen overflow-hidden">
       <LiquidMetalBackground />
-
       <div className="fixed inset-0 z-[5] bg-black/50" />
-
       <FloatingNavbar />
 
       <div
@@ -290,29 +228,21 @@ export default function Index() {
       >
         {/* Герой */}
         <section id="home" className="flex min-w-full snap-start items-center justify-center px-4 py-20">
-          <div className="mx-auto max-w-4xl">
-            <div className="text-center px-0 leading-5">
-              <h1 className="mb-8 text-balance text-5xl tracking-tight text-white [text-shadow:_0_4px_20px_rgb(0_0_0_/_60%)] md:text-6xl lg:text-8xl">
-                <span className="font-open-sans-custom not-italic">АЗС</span>{" "}
-                <span className="font-serif italic">SALAVAT.</span>
-              </h1>
-
-              <p className="mb-8 mx-auto max-w-2xl text-pretty leading-relaxed text-gray-300 [text-shadow:_0_2px_10px_rgb(0_0_0_/_50%)] font-thin font-open-sans-custom tracking-wide text-xl">
-                Заправляйтесь с уверенностью — качественное топливо,{" "}
-                <span className="font-serif italic">быстрое обслуживание</span> и честные цены каждый день
-              </p>
-
-              <div className="flex justify-center gap-4">
-                <ShinyButton
-                  className="px-8 py-3 text-base"
-                  onClick={() => {
-                    const el = document.getElementById("reviews")
-                    el?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" })
-                  }}
-                >
-                  Оставить отзыв
-                </ShinyButton>
-              </div>
+          <div className="mx-auto max-w-4xl text-center">
+            <h1 className="mb-8 text-balance text-5xl tracking-tight text-white [text-shadow:_0_4px_20px_rgb(0_0_0_/_60%)] md:text-6xl lg:text-8xl">
+              <span className="font-open-sans-custom not-italic">АЗС</span>{" "}
+              <span className="font-serif italic">SALAVAT.</span>
+            </h1>
+            <p className="mb-8 mx-auto max-w-2xl text-pretty leading-relaxed text-gray-300 [text-shadow:_0_2px_10px_rgb(0_0_0_/_50%)] font-thin font-open-sans-custom tracking-wide text-xl">
+              Заправляйтесь с уверенностью — качественное топливо,{" "}
+              <span className="font-serif italic">быстрое обслуживание</span> и честные цены каждый день
+            </p>
+            <div className="flex justify-center">
+              <ShinyButton className="px-8 py-3 text-base" onClick={() => {
+                document.getElementById("reviews")?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" })
+              }}>
+                Оставить отзыв
+              </ShinyButton>
             </div>
           </div>
         </section>
@@ -331,15 +261,8 @@ export default function Index() {
           className="relative min-w-full snap-start overflow-y-auto px-4 pt-24 pb-20 hide-scrollbar"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          <div
-            aria-hidden="true"
-            className={cn(
-              "absolute inset-0 z-0 size-full pointer-events-none",
-              "bg-[radial-gradient(rgba(255,255,255,0.1)_1px,transparent_1px)]",
-              "bg-[size:12px_12px]",
-              "opacity-30",
-            )}
-          />
+          <div aria-hidden="true" className={cn("absolute inset-0 z-0 size-full pointer-events-none",
+            "bg-[radial-gradient(rgba(255,255,255,0.1)_1px,transparent_1px)]", "bg-[size:12px_12px]", "opacity-30")} />
 
           <div className="relative z-10 mx-auto w-full max-w-6xl">
             <div className="mx-auto mb-10 max-w-2xl text-center">
@@ -352,20 +275,17 @@ export default function Index() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-              {MOCK_REVIEWS.map((review) => (
+              {reviews.map((review) => (
                 <ReviewCard key={review.id} review={review} />
               ))}
 
-              {/* Форма отзыва */}
               <div className="relative rounded-xl border-2 border-white/10 bg-white/5 backdrop-blur-sm p-5">
                 <DotPattern width={5} height={5} />
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 mb-4">
-                    <Badge className="bg-white/10 text-white border-white/20 font-open-sans-custom">
-                      Новый отзыв
-                    </Badge>
+                    <Badge className="bg-white/10 text-white border-white/20 font-open-sans-custom">Новый отзыв</Badge>
                   </div>
-                  <ReviewForm />
+                  <ReviewForm onSuccess={loadReviews} />
                 </div>
               </div>
             </div>
@@ -379,16 +299,8 @@ export default function Index() {
           className="relative min-w-full snap-start overflow-y-auto px-4 pt-24 pb-20 hide-scrollbar"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          <div
-            aria-hidden="true"
-            className={cn(
-              "absolute inset-0 z-0 size-full pointer-events-none",
-              "bg-[radial-gradient(rgba(255,255,255,0.1)_1px,transparent_1px)]",
-              "bg-[size:12px_12px]",
-              "opacity-30",
-            )}
-          />
-
+          <div aria-hidden="true" className={cn("absolute inset-0 z-0 size-full pointer-events-none",
+            "bg-[radial-gradient(rgba(255,255,255,0.1)_1px,transparent_1px)]", "bg-[size:12px_12px]", "opacity-30")} />
           <div className="relative z-10 mx-auto w-full max-w-7xl">
             <div className="mx-auto mb-10 max-w-2xl text-center">
               <h1 className="text-4xl font-extrabold tracking-tight lg:text-6xl text-white [text-shadow:_0_4px_20px_rgb(0_0_0_/_60%)] font-open-sans-custom">
@@ -408,63 +320,31 @@ export default function Index() {
           ref={contactSectionRef}
           className="relative min-w-full snap-start overflow-y-auto px-4 pt-24 pb-20"
         >
-          <div
-            aria-hidden="true"
-            className={cn(
-              "absolute inset-0 z-0 size-full pointer-events-none",
-              "bg-[radial-gradient(rgba(255,255,255,0.1)_1px,transparent_1px)]",
-              "bg-[size:12px_12px]",
-              "opacity-30",
-            )}
-          />
-
+          <div aria-hidden="true" className={cn("absolute inset-0 z-0 size-full pointer-events-none",
+            "bg-[radial-gradient(rgba(255,255,255,0.1)_1px,transparent_1px)]", "bg-[size:12px_12px]", "opacity-30")} />
           <div className="relative z-10 mx-auto w-full max-w-5xl mt-[5vh]">
             <ContactCard
               title="Свяжитесь с нами"
               description="Есть вопрос или предложение? Напишите нам — мы отвечаем в течение одного рабочего дня."
               contactInfo={[
-                {
-                  icon: PhoneIcon,
-                  label: "Телефон",
-                  value: "+7 (347) 000-00-00",
-                },
-                {
-                  icon: MapPinIcon,
-                  label: "Город",
-                  value: "Салават, Башкортостан",
-                  className: "col-span-2",
-                },
+                { icon: PhoneIcon, label: "Телефон", value: "+7 (347) 000-00-00" },
+                { icon: MapPinIcon, label: "Город", value: "Чебаркуль", className: "col-span-2" },
               ]}
             >
               <form className="w-full space-y-4">
                 <div className="flex flex-col gap-2">
-                  <Label className="text-white [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] font-open-sans-custom">
-                    Имя
-                  </Label>
-                  <Input
-                    type="text"
-                    className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-                  />
+                  <Label className="text-white font-open-sans-custom">Имя</Label>
+                  <Input type="text" className="bg-white/10 border-white/20 text-white placeholder:text-gray-400" />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label className="text-white [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] font-open-sans-custom">
-                    Телефон
-                  </Label>
-                  <Input
-                    type="tel"
-                    className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-                  />
+                  <Label className="text-white font-open-sans-custom">Телефон</Label>
+                  <Input type="tel" className="bg-white/10 border-white/20 text-white placeholder:text-gray-400" />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label className="text-white [text-shadow:_0_2px_6px_rgb(0_0_0_/_40%)] font-open-sans-custom">
-                    Сообщение
-                  </Label>
+                  <Label className="text-white font-open-sans-custom">Сообщение</Label>
                   <Textarea className="bg-white/10 border-white/20 text-white placeholder:text-gray-400" />
                 </div>
-                <Button
-                  className="w-full bg-white text-black hover:bg-gray-100 font-open-sans-custom"
-                  type="button"
-                >
+                <Button className="w-full bg-white text-black hover:bg-gray-100 font-open-sans-custom" type="button">
                   Отправить
                 </Button>
               </form>

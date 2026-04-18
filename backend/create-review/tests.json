@@ -1,0 +1,18 @@
+{
+  "tests": [
+    {
+      "name": "Создать отзыв",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "name": "Тест Тестов",
+        "station": "АЗС №1",
+        "text": "Тестовый отзыв",
+        "rating": 5
+      },
+      "expectedStatus": 200,
+      "expectedBody": {"success": true},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
